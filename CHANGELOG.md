@@ -1,5 +1,12 @@
 # ActiveShipping CHANGELOG
 
+### v1.8.3
+- Add description field to rate estimates
+
+### v1.8.2
+- Add option for FedEx label format
+- Fix kunaki remote tests broken due to more shipping options
+
 ### v1.6.1
 - Fix FedEx ShipmentEvents to include event type
 - Skip broken Canada Post remote tests

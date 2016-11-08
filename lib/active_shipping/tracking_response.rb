@@ -2,7 +2,7 @@ module ActiveShipping
 
   # Represents the response to a {ActiveShipping::Carrier#find_tracking_info} call.
   #
-  # @note Some carriers provide more information that others, so not all attributes
+  # @note Some carriers provide more information than others, so not all attributes
   #   will be set, depending on what carrier you are using.
   #
   # @!attribute carrier
@@ -82,7 +82,7 @@ module ActiveShipping
       @shipment_events.last
     end
 
-    # Returns `true` if something the shipment has arrived at the destination.
+    # Returns `true` if the shipment has arrived at the destination.
     # @return [Boolean]
     def is_delivered?
       @status == :delivered
