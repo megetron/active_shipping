@@ -112,6 +112,14 @@ module ActiveShipping
       "20" => "UPS Pack & Collect Service 3-Attempt Box 5",
     }
 
+    LABEL_METHOD_CODES = {
+      "01" => "ImportControl Print and Mail",
+      "02" => "ImportControl One-Attempt",
+      "03" => "ImportControl ThreeAttempt",
+      "04" => "ImportControl Electronic Label",
+      "05" => "ImportControl Print Label"
+    }
+
     TRACKING_STATUS_CODES = HashWithIndifferentAccess.new(
       'I' => :in_transit,
       'D' => :delivered,
@@ -413,9 +421,17 @@ module ActiveShipping
             # Required element. The company whose account is responsible for the label(s).
             build_location_node(xml, 'Shipper', shipper, options)
 
-            if options[:saturday_delivery]
-              xml.ShipmentServiceOptions do
+            xml.ShipmentServiceOptions do
+              if options[:saturday_delivery]
                 xml.SaturdayDelivery
+              end
+
+              if (code = options[:label_method_code])
+                xml.ImportControlIndicator
+                xml.LabelMethod do
+                  xml.Code(code)
+                  xml.Description(LABEL_METHOD_CODES[code])
+                end
               end
             end
 
@@ -697,11 +713,8 @@ module ActiveShipping
       xml.Package do
         # not implemented:  * Shipment/Package/PackagingType element
 
-        #return requires description
-        if options[:return]
-          contents_description = package.options[:description]
-          xml.Description(contents_description) if contents_description
-        end
+        contents_description = package.options[:description]
+        xml.Description(contents_description) if contents_description
 
         xml.PackagingType do
           xml.Code('02')
