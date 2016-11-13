@@ -420,17 +420,19 @@ module ActiveShipping
             build_location_node(xml, 'ShipFrom', origin, options)
             # Required element. The company whose account is responsible for the label(s).
             build_location_node(xml, 'Shipper', shipper, options)
+            
+            if (options[:saturday_delivery] || options[:label_method_code])
+              xml.ShipmentServiceOptions do
+                xml.SaturdayDelivery if options[:saturday_delivery]
 
-            xml.ShipmentServiceOptions do
-              if options[:saturday_delivery]
-                xml.SaturdayDelivery
-              end
+                code = options[:label_method_code]
 
-              if (code = options[:label_method_code])
-                xml.ImportControlIndicator
-                xml.LabelMethod do
-                  xml.Code(code)
-                  xml.Description(LABEL_METHOD_CODES[code])
+                if (code.present?)
+                  xml.ImportControlIndicator
+                  xml.LabelMethod do
+                    xml.Code(code)
+                    xml.Description(LABEL_METHOD_CODES[code])
+                  end
                 end
               end
             end
