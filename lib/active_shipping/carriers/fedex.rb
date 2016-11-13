@@ -219,6 +219,50 @@ module ActiveShipping
                 build_shipment_responsible_party_node(xml, options[:shipper] || origin)
               end
             end
+            # international shipping
+            if origin.country_code != destination.country_code 
+              xml.CustomsClearanceDetail do
+                xml.DutiesPayment do
+                  xml.PaymentType('SENDER') # "RECIPIENT"# PaymentType.SENDER;
+                  xml.Payor do
+                    build_shipment_responsible_party_node(xml, options[:shipper] || origin)
+                  end
+                end
+
+                xml.DocumentContent  "NON_DOCUMENTS" # InternationalDocumentContentType.NON_DOCUMENTS;
+
+                packages_value = packages.sum &:value
+                packages_value = (packages_value > 0) ? packages_value : 1.0
+
+                xml.CustomsValue do
+                  xml.Currency "ILS"
+                  xml.Amount packages_value
+                end
+
+                xml.Commodities do
+                  xml.NumberOfPieces packages.size
+                  
+                  descriptions = packages.map(&:options).map{|a| a[:description]}.join(",") || "Generic Goods"
+
+                  xml.Description descriptions
+                  xml.CountryOfManufacture(origin.country_code)
+
+                  xml.Weight do
+                    xml.Units 'KG'
+                    xml.Value packages.sum(&:kgs)
+                  end
+
+                  
+                  xml.Quantity packages.size
+                  xml.QuantityUnits  "Unit(s)"
+
+                  xml.UnitPrice do
+                    xml.Currency "ILS"
+                    xml.Amount "1.0"
+                  end
+                end
+              end
+            end
 
             xml.LabelSpecification do
               xml.LabelFormatType('COMMON2D')
