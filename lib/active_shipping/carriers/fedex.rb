@@ -274,7 +274,7 @@ module ActiveShipping
               xml.LabelStockType(options[:label_stock_type] || DEFAULT_LABEL_STOCK_TYPE)
             end
 
-            xml.RateRequestTypes('ACCOUNT')
+            build_rate_request_types_node(xml,options[:currency] ? 'PREFERRED' : 'ACCOUNT')
 
             xml.PackageCount(packages.size)
             packages.each do |package|
@@ -364,6 +364,7 @@ module ActiveShipping
               xml.DropoffType(options[:dropoff_type] || 'REGULAR_PICKUP')
               xml.PackagingType(options[:packaging_type] || 'YOUR_PACKAGING')
             end
+            xml.PreferredCurrency(options[:currency]) if options[:currency]
 
             build_location_node(xml, 'Shipper', options[:shipper] || origin)
             build_location_node(xml, 'Recipient', destination)
@@ -375,14 +376,14 @@ module ActiveShipping
               freight_options = options[:freight]
               build_shipping_charges_payment_node(xml, freight_options)
               build_freight_shipment_detail_node(xml, freight_options, packages, imperial)
-              build_rate_request_types_node(xml)
+              build_rate_request_types_node(xml,options[:currency] ? 'PREFERRED' : 'ACCOUNT')
             else
               xml.SmartPostDetail do
                 xml.Indicia(options[:smart_post_indicia] || 'PARCEL_SELECT')
                 xml.HubId(options[:smart_post_hub_id] || 5902) # default to LA
               end
 
-              build_rate_request_types_node(xml)
+              build_rate_request_types_node(xml,options[:currency] ? 'PREFERRED' : 'ACCOUNT')
               xml.PackageCount(packages.size)
               build_packages_nodes(xml, packages, imperial)
             end
@@ -540,12 +541,19 @@ module ActiveShipping
             delivery_timestamp = rated_shipment.at('DeliveryTimestamp').try(:text)
             delivery_range = delivery_range_from(transit_time, max_transit_time, delivery_timestamp, (service_code == "GROUND_HOME_DELIVERY"), options)
 
-            currency = rated_shipment.at('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Currency').text
+            if options[:currency] 
+              preferred_rate = rated_shipment.at("RatedShipmentDetails/ShipmentRateDetail/RateType:contains('PREFERRED_ACCOUNT_SHIPMENT')").parent
+              total_price = preferred_rate.at("TotalNetCharge/Amount").text.to_f
+              currency = preferred_rate.at("TotalNetCharge/Currency").text
+            else
+              total_price = rated_shipment.at('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Amount').text.to_f
+              currency = rated_shipment.at('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Currency').text
+            end
 
             RateEstimate.new(origin, destination, @@name,
                  self.class.service_name_for_code(service_type),
                  :service_code => service_code,
-                 :total_price => rated_shipment.at('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Amount').text.to_f,
+                 :total_price => total_price,
                  :currency => currency,
                  :packages => packages,
                  :delivery_range => delivery_range)
