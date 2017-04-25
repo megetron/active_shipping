@@ -542,7 +542,7 @@ module ActiveShipping
             delivery_range = delivery_range_from(transit_time, max_transit_time, delivery_timestamp, (service_code == "GROUND_HOME_DELIVERY"), options)
 
             if options[:currency] 
-              preferred_rate = rated_shipment.at("RatedShipmentDetails/ShipmentRateDetail/RateType:contains('PREFERRED_ACCOUNT_SHIPMENT')").parent
+              preferred_rate = rated_shipment.at("RatedShipmentDetails/ShipmentRateDetail/RateType[text() = 'PREFERRED_ACCOUNT_SHIPMENT']").parent
               total_price = preferred_rate.at("TotalNetCharge/Amount").text.to_f
               currency = preferred_rate.at("TotalNetCharge/Currency").text
             else
