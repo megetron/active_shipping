@@ -204,6 +204,7 @@ module ActiveShipping
             xml.DropoffType('REGULAR_PICKUP')
             xml.ServiceType(options[:service_type] || 'FEDEX_GROUND')
             xml.PackagingType('YOUR_PACKAGING')
+            xml.PreferredCurrency(options[:currency]) if options[:currency]
 
             xml.Shipper do
               build_contact_address_nodes(xml, options[:shipper] || origin)
