@@ -282,7 +282,24 @@ module ActiveShipping::Test
                                       :country => 'XK',
                                       :city => 'Prishtinë',
                                       :address1 => 'Ahmet Krasniqi',
-                                      :postal_code => '10000')
+                                      :postal_code => '10000'),
+        :telaviv => Location.new(    
+                                      :country => 'Israel',
+                                      :province => 'Merkaz',
+                                      :city => 'תל אביב',
+                                      :name => 'עמי',
+                                      :address1 => 'קינג ג״ורג',
+                                      :address2 => '1',
+                                      :phone => '05411234567'),
+        :ramatgan => Location.new(    
+                                      :country => 'Israel',
+                                      :province => 'Merkaz',
+                                      :city => 'רמת גן',
+                                      :name => 'דויד',
+                                      :address1 => 'המעפיל',
+                                      :address2 => '2',
+                                      :phone => '05411234568'),
+
       }
 
     end
