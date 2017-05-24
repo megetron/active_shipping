@@ -80,7 +80,7 @@ module ActiveShipping
       request = build_shipment_request(origin, destination, packages, options)
 
       logger.debug(request) if logger
-      response = commit(save_request(request), (options[:test] || false))
+      response = commit(save_request(request), options)
       parse_ship_response(response)
     end
 
@@ -230,7 +230,7 @@ module ActiveShipping
       ERROR_CODES.include?(result.try(:text)) ? "#{ERROR_CODES[result.text]} (#{result.text})" : nil
     end
 
-    def commit(request, test = false)
+    def commit(request, options)
       ssl_post(options[:endpoint], request.gsub("\n", ''),'Content-Type' => 'text/xml; charset=utf-8')
     end
 
