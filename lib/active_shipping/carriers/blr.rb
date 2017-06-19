@@ -90,14 +90,15 @@ module ActiveShipping
           options[:biz][:services]
 
         services.each do |service|
-          puts "-"*100
-          puts options[:biz][:time_zone]
-          puts ActiveSupport::TimeZone[options[:biz][:time_zone]]
-          puts time_now
-          puts service[:time_to_deliver]
-          puts service[:time_to_deliver].to_i*60
-          puts (time_now + service[:time_to_deliver].to_i*60).to_s
-          puts ActiveSupport::TimeZone[options[:biz][:time_zone]].parse((time_now + service[:time_to_deliver].to_i*60).to_s)
+
+          logger.info "-"*100
+          logger.info options[:biz][:time_zone]
+          logger.info ActiveSupport::TimeZone[options[:biz][:time_zone]]
+          logger.info time_now
+          logger.info service[:time_to_deliver]
+          logger.info service[:time_to_deliver].to_i*60
+          logger.info (time_now + service[:time_to_deliver].to_i*60).to_s
+          logger.info ActiveSupport::TimeZone[options[:biz][:time_zone]].parse((time_now + service[:time_to_deliver].to_i*60).to_s)
 
 
           
