@@ -90,6 +90,18 @@ module ActiveShipping
           options[:biz][:services]
 
         services.each do |service|
+          puts "-"*100
+          puts options[:biz][:time_zone]
+          puts ActiveSupport::TimeZone[options[:biz][:time_zone]]
+          puts time_now
+          puts service[:time_to_deliver]
+          puts service[:time_to_deliver].to_i*60
+          puts (time_now + service[:time_to_deliver].to_i*60).to_s
+          puts ActiveSupport::TimeZone[options[:biz][:time_zone]].parse((time_now + service[:time_to_deliver].to_i*60).to_s)
+
+
+          
+
           rate_estimates << RateEstimate.new(origin, destination, @@name,
                               SERVICE_TYPES[service[:service_code].to_s], :service_code => service[:service_code].to_s,
                               :total_price => (area[:amount] * service[:weight]), :currency => 'ILS', :packages => packages,
