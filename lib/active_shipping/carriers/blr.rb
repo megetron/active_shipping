@@ -9,17 +9,20 @@ module ActiveShipping
       "1" => "רגיל",
       "2" => "דחוף",
       "3" => "בהול",
+      "11" => "רגיל כפול",
+      "21" => "דחוף כפול",
+      "31" => "בהול כפול",
     }
 
     DROPOFF_TYPES = {
-      "regular_pickup" => "1",
-      "collect" => "2",
-      "transfer" => "3",
+      "regular_pickup"  => "1",
+      "collect"         => "2",
+      "transfer"        => "3",
     }
 
     VEHICLE_TYPES = {
-      "bike" => "1",
-      "car" => "2",
+      "bike"  => "1",
+      "car"   => "2",
     }
 
     ERROR_CODES = {
@@ -62,13 +65,51 @@ module ActiveShipping
     def find_rates(origin, destination, packages, options = {})
       options = @options.merge(options)
       packages = Array(packages)
+      rate_estimates = []
+      success = true
+      message = nil
+      
 
+      biz = Biz::Schedule.new do |config|
+        config.hours      = options[:biz][:hours].each{|k,v| v.stringify_keys!}
+        config.holidays   = options[:biz][:holidays]
+        config.time_zone  = options[:biz][:time_zone]
+      end
+
+      area = options[:biz][:areas].select do |area| 
+        area[:level_en].repeated_permutation(2).select{|x,y| [x,y]==[origin.city,destination.city]}.any? ||
+        area[:level_he].repeated_permutation(2).select{|x,y| [x,y]==[origin.city,destination.city]}.any?
+      end.try(:first)
+
+      if area
+        time_now = Time.now.utc # Time.local(2017, 6, 14, 13,1).utc
+        biz_hours = biz.in_hours?(time_now)
+
+        services = biz_hours ? 
+          options[:biz][:services].select{|service| service[:active_until].nil? || time_now < ActiveSupport::TimeZone[options[:biz][:time_zone]].parse(service[:active_until]).utc } : 
+          options[:biz][:services]
+
+        services.each do |service|
+          rate_estimates << RateEstimate.new(origin, destination, @@name,
+                              SERVICE_TYPES[service[:service_code].to_s], :service_code => service[:service_code].to_s,
+                              :total_price => (area[:amount] * service[:weight]), :currency => 'ILS', :packages => packages,
+                              :pickup_time => 
+                                [ 
+                                  (
+                                    biz_hours ? 
+                                      ActiveSupport::TimeZone[options[:biz][:time_zone]].parse((time_now + service[:time_to_deliver].to_i*60).to_s) :
+                                      biz.time(service[:time_to_deliver], :minutes).after(time_now)
+                                  ).to_s
+                                ]
+                              )
+        end
+      end
+
+      RateResponse.new(success, message, {}, :rates => rate_estimates, :xml => "response", :request => "last_request", :log_xml => options[:log_xml])
       # rate_request = build_rate_request(origin, destination, packages, options)
-
       # xml = commit(save_request(rate_request), (options[:test] || false))
-      xml = ""
-
-      parse_rate_response(origin, destination, packages, xml, options)
+      # xml = ""
+      # parse_rate_response(origin, destination, packages, xml, options)
     end
 
     # Get Shipping labels
@@ -128,85 +169,6 @@ module ActiveShipping
     end
 
 
-    def build_rate_request(origin, destination, packages, options = {})
-    end
-
-    def parse_rate_response(origin, destination, packages, response, options)
-      # xml = build_document(response, 'RateReply')
-      success = true
-      message = nil
-      # success = response_success?(xml) 
-      # message = response_message(xml)
-
-      # if success
-      #   missing_xml_field = false
-      #   rate_estimates = xml.root.css('> RateReplyDetails').map do |rated_shipment|
-      #     begin
-      #       service_code = rated_shipment.at('ServiceType').text
-      #       is_saturday_delivery = rated_shipment.at('AppliedOptions').try(:text) == 'SATURDAY_DELIVERY'
-      #       service_type = is_saturday_delivery ? "#{service_code}_SATURDAY_DELIVERY" : service_code
-
-      #       transit_time = rated_shipment.at('TransitTime').text if ["FEDEX_GROUND", "GROUND_HOME_DELIVERY"].include?(service_code)
-      #       max_transit_time = rated_shipment.at('MaximumTransitTime').try(:text) if service_code == "FEDEX_GROUND"
-
-      #       delivery_timestamp = rated_shipment.at('DeliveryTimestamp').try(:text)
-      #       delivery_range = delivery_range_from(transit_time, max_transit_time, delivery_timestamp, (service_code == "GROUND_HOME_DELIVERY"), options)
-
-      #       if options[:currency] 
-      #         preferred_rate = rated_shipment.at("RatedShipmentDetails/ShipmentRateDetail/RateType[text() = 'PREFERRED_ACCOUNT_SHIPMENT']").parent
-      #         total_price = preferred_rate.at("TotalNetCharge/Amount").text.to_f
-      #         currency = preferred_rate.at("TotalNetCharge/Currency").text
-      #       else
-      #         total_price = rated_shipment.at('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Amount').text.to_f
-      #         currency = rated_shipment.at('RatedShipmentDetails/ShipmentRateDetail/TotalNetCharge/Currency').text
-      #       end
-
-      rate_estimates = [ 
-                        RateEstimate.new(origin, destination, @@name,
-                          SERVICE_TYPES["1"],
-                          :service_code => "1",
-                          :total_price => 2000,
-                          :currency => 'ILS',
-                          :packages => packages,
-                          :delivery_range => ['2017-11-10']),
-                        RateEstimate.new(origin, destination, @@name,
-                          SERVICE_TYPES["3"],
-                          :service_code => "3",
-                          :total_price => 4000,
-                          :currency => 'ILS',
-                          :packages => packages,
-                          :delivery_range => ['2017-11-10']),
-                        RateEstimate.new(origin, destination, @@name,
-                          SERVICE_TYPES["2"],
-                          :service_code => "2",
-                          :total_price => 3000,
-                          :currency => 'ILS',
-                          :packages => packages,
-                          :delivery_range => ['2017-11-10']),
-                    ]
-      #     rescue NoMethodError
-      #       missing_xml_field = true
-      #       nil
-      #     end
-      #   end
-
-      #   rate_estimates = rate_estimates.compact
-      #   logger.warn("[FedexParseRateError] Some fields where missing in the response: #{response}") if logger && missing_xml_field
-
-      #   if rate_estimates.empty?
-      #     success = false
-      #     if missing_xml_field
-      #       message = "The response from the carrier contained errors and could not be treated"
-      #     else
-      #       message = "No shipping rates could be found for the destination address" if message.blank?
-      #     end
-      #   end
-
-      # else
-      #   rate_estimates = []
-      # end
-      RateResponse.new(success, message, {}, :rates => rate_estimates, :xml => "response", :request => "last_request", :log_xml => options[:log_xml])
-    end    
 
     def parse_ship_response(response)
       xml = build_document(response, 'Envelope')
