@@ -76,23 +76,35 @@ module ActiveShipping
         config.time_zone  = options[:biz][:time_zone]
       end
 
-      area = options[:biz][:areas].select do |area| 
+      area = options[:biz][:areas].find do |area| 
         area[:level_en].repeated_permutation(2).select{|x,y| [x,y]==[origin.city,destination.city]}.any? ||
         area[:level_he].repeated_permutation(2).select{|x,y| [x,y]==[origin.city,destination.city]}.any?
-      end.try(:first)
+      end
 
-      if area
+      
+      # Package.new(4,[1,2,3])
+      # Package.new(packages.map(&:weight).sum,[1,2,3])
+      # packages.each do |package|
+
+      # Find the rate's weight of a specific package - needed for a rate calculations - bigger packages costs more to ship
+      dimensions = packages.first.instance_variable_get(:@dimensions).map(&:value).map(&:to_f).sort
+      package = options[:biz][:packages].find do |package_setting|
+        package_setting[:max_dimmensions].sort.zip(dimensions).all?{|a, b| a >= b } 
+        # && package_setting[:max_weight].to_f > packages.first.weight.value.to_f
+      end
+
+      if area && package
         time_now = Time.now.utc # Time.local(2017, 6, 14, 13,1).utc
         biz_hours = biz.in_hours?(time_now)
 
-        services = biz_hours ? 
+        services = biz_hours ?
           options[:biz][:services].select{|service| service[:active_until].nil? || time_now < ActiveSupport::TimeZone[options[:biz][:time_zone]].parse(service[:active_until]).utc } : 
           options[:biz][:services]
-
+        
         services.each do |service|
           rate_estimates << RateEstimate.new(origin, destination, @@name,
                               SERVICE_TYPES[service[:service_code].to_s], :service_code => service[:service_code].to_s,
-                              :total_price => (area[:amount] * service[:weight]).to_i, :currency => 'ILS', :packages => packages,
+                              :total_price => (area[:amount] * service[:weight] * package[:weight]).to_i, :currency => 'ILS', :packages => packages,
                               :pickup_time => 
                                 [ 
                                   (
