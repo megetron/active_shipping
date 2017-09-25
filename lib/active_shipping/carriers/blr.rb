@@ -144,7 +144,7 @@ module ActiveShipping
       pParams = [ options[:dropoff_type] || 1, 
                   origin.address1,      origin.address2,      origin.city,
                   destination.address1, destination.address2, destination.city,
-                  origin.company, destination.company,
+                  "#{origin.name} (#{origin.phone})" , "#{destination.name} (#{destination.phone})",
                   options[:comments],
                   options[:service_code],
                   0, # N/A
@@ -159,7 +159,7 @@ module ActiveShipping
                   options[:pallet_number] || 0,
                   nil, # origin city by id in databases - Not Mandatory
                   nil, # destination city by id in databases - Not Mandatory
-                  origin.name,
+                  options[:contact_name] || " ",
                   origin.phone,
                   options[:email],
                   options[:pickup_date], # .to_time.strftime("%F") if options[:pickup_date],  # yyyy-mm-dd
