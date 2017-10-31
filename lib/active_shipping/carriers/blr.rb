@@ -147,7 +147,7 @@ module ActiveShipping
                   "#{origin.name} (#{origin.phone})" , "#{destination.name} (#{destination.phone})",
                   options[:comments],
                   options[:service_code],
-                  0, # N/A
+                  options[:service_biz_days_type] || 0,
                   options[:vehicle_type] || 1,
                   packages.size,
                   options[:dual_shipping].nil? ? 1 : 2, # dual shipping - to deliver a package and get another to the sender
